@@ -25,7 +25,7 @@ import org.eclipse.nebula.widgets.xviewer.example.model.ISomeTask;
 import org.eclipse.nebula.widgets.xviewer.example.model.ISomeTask.RunDb;
 import org.eclipse.nebula.widgets.xviewer.example.model.ISomeTask.TaskType;
 import org.eclipse.nebula.widgets.xviewer.example.model.SomeTask;
-import org.eclipse.nebula.widgets.xviewer.util.XViewerUtil;
+import org.eclipse.nebula.widgets.xviewer.util.XViewerDisplay;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
@@ -39,7 +39,7 @@ import org.eclipse.swt.widgets.ToolItem;
 
 /**
  * Example use of XViewer. Run as application to see sample XViewer.
- * 
+ *
  * @author Donald G. Dunne
  */
 public class MyXViewerTest {
@@ -69,7 +69,7 @@ public class MyXViewerTest {
       toolBarComposite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
       // Set property that this xviewer is outside the Eclipse workbench
-      XViewerUtil.setStandaloneXViewer(true, Display_1);
+      XViewerDisplay.setStandaloneXViewer(true, Display_1);
 
       myXviewer = new MyXViewer(Shell_1, SWT.MULTI | SWT.BORDER | SWT.FULL_SELECTION);
       myXviewer.getTree().setLayoutData(new GridData(GridData.FILL_BOTH));
@@ -89,7 +89,10 @@ public class MyXViewerTest {
       for (int x = 0; x < 1; x++) {
          tasks.addAll(getTestTasks());
       }
-      myXviewer.setInput(tasks);
+      /**
+       * Note: setInputXViewer must be called instead of setInput for XViewer to operate properly
+       */
+      myXviewer.setInputXViewer(tasks);
       Shell_1.open();
       while (!Shell_1.isDisposed()) {
          if (!Display_1.readAndDispatch()) {
@@ -122,7 +125,10 @@ public class MyXViewerTest {
             for (int x = 0; x < 1; x++) {
                tasks.addAll(getTestTasks());
             }
-            myXviewer.setInput(tasks);
+            /**
+             * Note: setInputXViewer must be called instead of setInput for XViewer to operate properly
+             */
+            myXviewer.setInputXViewer(tasks);
          }
       });
 

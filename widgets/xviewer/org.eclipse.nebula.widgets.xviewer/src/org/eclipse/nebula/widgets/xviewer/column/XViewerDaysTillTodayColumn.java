@@ -15,17 +15,16 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Level;
-
 import org.eclipse.nebula.widgets.xviewer.Activator;
 import org.eclipse.nebula.widgets.xviewer.IXViewerLabelProvider;
-import org.eclipse.nebula.widgets.xviewer.XViewerColumn;
 import org.eclipse.nebula.widgets.xviewer.XViewerComputedColumn;
 import org.eclipse.nebula.widgets.xviewer.XViewerSorter;
 import org.eclipse.nebula.widgets.xviewer.XViewerText;
-import org.eclipse.nebula.widgets.xviewer.util.XViewerException;
+import org.eclipse.nebula.widgets.xviewer.core.model.XViewerAlign;
+import org.eclipse.nebula.widgets.xviewer.core.model.SortDataType;
+import org.eclipse.nebula.widgets.xviewer.core.model.XViewerColumn;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerLib;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerLog;
-import org.eclipse.swt.SWT;
 
 /**
  * @author Donald G. Dunne
@@ -39,12 +38,12 @@ public class XViewerDaysTillTodayColumn extends XViewerComputedColumn {
    }
 
    private XViewerDaysTillTodayColumn(String id) {
-      super(id, XViewerText.get("column.daysTillToday.name"), 30, SWT.LEFT, false, SortDataType.Integer, false, //$NON-NLS-1$
-    		  XViewerText.get("column.daysTillToday.description")); //$NON-NLS-1$
+      super(id, XViewerText.get("column.daysTillToday.name"), 30, XViewerAlign.Left, false, SortDataType.Integer, false, //$NON-NLS-1$
+         XViewerText.get("column.daysTillToday.description")); //$NON-NLS-1$
    }
 
    @Override
-   public String getColumnText(Object element, XViewerColumn column, int columnIndex) throws XViewerException {
+   public String getColumnText(Object element, XViewerColumn column, int columnIndex) {
       if (sourceXViewerColumn == null) {
          return String.format(XViewerText.get("error.no_source_column"), id); //$NON-NLS-1$
       }
@@ -89,7 +88,7 @@ public class XViewerDaysTillTodayColumn extends XViewerComputedColumn {
       if (sourceXViewerColumn == null) {
          return XViewerText.get("column.daysTillToday.name"); //$NON-NLS-1$
       }
-      return XViewerText.get("column.daysTillToday.name2") + " " + sourceXViewerColumn.getName();  //$NON-NLS-1$//$NON-NLS-2$
+      return XViewerText.get("column.daysTillToday.name2") + " " + sourceXViewerColumn.getName(); //$NON-NLS-1$//$NON-NLS-2$
    }
 
    @Override

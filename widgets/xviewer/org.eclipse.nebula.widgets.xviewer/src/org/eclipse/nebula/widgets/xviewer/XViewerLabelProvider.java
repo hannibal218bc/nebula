@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import org.eclipse.jface.viewers.ITableColorProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.nebula.widgets.xviewer.core.model.XViewerColumn;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerLog;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
@@ -81,12 +82,12 @@ public abstract class XViewerLabelProvider implements ITableLabelProvider, ITabl
          if (!xViewerColumn.isShow()) {
             return "";
          }
-         // Check if Lazy Loaded column
-         if (xViewerColumn instanceof IXViewerLazyLoadColumn) {
-            IXViewerLazyLoadColumn lazyLoadColumn = (IXViewerLazyLoadColumn) xViewerColumn;
-            Long key = lazyLoadColumn.getKey(element);
-            String cachedValue = xViewerColumn.getLazyLoadingValue(key);
-            String result = ((IXViewerLazyLoadColumn) xViewerColumn).getText(element, key, cachedValue);
+         // Check if Pre Computed column
+         if (xViewerColumn instanceof IXViewerPreComputedColumn) {
+            IXViewerPreComputedColumn preComputedColumn = (IXViewerPreComputedColumn) xViewerColumn;
+            Long key = preComputedColumn.getKey(element);
+            String cachedValue = xViewerColumn.getPreComputedValue(key);
+            String result = ((IXViewerPreComputedColumn) xViewerColumn).getText(element, key, cachedValue);
             return result;
          }
          // First check value column's methods

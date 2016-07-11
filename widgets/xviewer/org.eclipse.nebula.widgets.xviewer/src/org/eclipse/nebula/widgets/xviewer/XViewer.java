@@ -40,17 +40,23 @@ import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.nebula.widgets.xviewer.action.TableCustomizationDropDownAction;
 import org.eclipse.nebula.widgets.xviewer.column.XViewerDaysTillTodayColumn;
 import org.eclipse.nebula.widgets.xviewer.column.XViewerDiffsBetweenColumnsColumn;
+import org.eclipse.nebula.widgets.xviewer.core.model.CustomizeData;
+import org.eclipse.nebula.widgets.xviewer.core.model.XViewerColumn;
 import org.eclipse.nebula.widgets.xviewer.customize.ColumnFilterDataUI;
 import org.eclipse.nebula.widgets.xviewer.customize.CustomizeManager;
 import org.eclipse.nebula.widgets.xviewer.customize.FilterDataUI;
 import org.eclipse.nebula.widgets.xviewer.customize.SearchDataUI;
 import org.eclipse.nebula.widgets.xviewer.edit.XViewerEditAdapter;
 import org.eclipse.nebula.widgets.xviewer.util.Pair;
+import org.eclipse.nebula.widgets.xviewer.util.internal.HtmlUtil;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerLib;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerLog;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerMenuDetectListener;
 import org.eclipse.nebula.widgets.xviewer.util.internal.XViewerMouseListener;
+import org.eclipse.nebula.widgets.xviewer.util.internal.dialog.HtmlDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.MouseAdapter;
+import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
@@ -88,6 +94,7 @@ public class XViewer extends TreeViewer {
    private Integer rightClickSelectedColumnNum = null;
    private TreeItem rightClickSelectedItem = null;
    private Color searchColor;
+   private boolean forcePend = false;
    private static final Map<Composite, Composite> parentToTopComposites = new HashMap<Composite, Composite>();
 
    public XViewer(Composite parent, int style, IXViewerFactory xViewerFactory) {
@@ -252,6 +259,7 @@ public class XViewer extends TreeViewer {
             statusLabel = new Label(searchComp, SWT.NONE);
             statusLabel.setText(" "); //$NON-NLS-1$
             statusLabel.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false));
+            statusLabel.addMouseListener(getCustomizationMouseListener());
          }
       }
 
@@ -287,9 +295,25 @@ public class XViewer extends TreeViewer {
       return 0;
    }
 
-   @Override
-   protected void inputChanged(Object input, Object oldInput) {
-      // Allow lazy load columns to be compute getColumnText prior to supplying Viewer with new input
+   /**
+    * Called to set the input to the XViewer. This method MUST be used to ensure that XViewer loads properly. Especially
+    * with the use of IXViewerPreComputedColumn.
+    */
+   public final void setInputXViewer(Object input) {
+      // Allow pre-computed columns to prior to supplying Viewer with new input
+      refreshColumnsWithPreCompute(input);
+   }
+
+   /**
+    * This is called after all preComputed columns are done loading.
+    */
+   private void superInputChanged(Object input) {
+      if (getTree() != null && !getTree().isDisposed()) {
+         super.setInput(input);
+      }
+   }
+
+   private List<Object> getInputObjects(Object input) {
       List<Object> objects = new LinkedList<Object>();
       if (input instanceof Collection) {
          Collection<?> collection = (Collection<?>) input;
@@ -297,46 +321,30 @@ public class XViewer extends TreeViewer {
             objects.add(obj);
          }
       }
-      for (XViewerColumn column : getCustomizeMgr().getCurrentVisibleTableColumns()) {
-         if (column instanceof IXViewerLazyLoadColumn) {
-            IXViewerLazyLoadColumn lazyColumn = (IXViewerLazyLoadColumn) column;
-            lazyColumn.setLoading(true);
-            refreshColumnLazy(lazyColumn, objects);
-            lazyColumn.setLoading(false);
-         }
-      }
-      super.inputChanged(input, oldInput);
-      updateStatusLabel();
+      return objects;
    }
 
-   /**
-    * Launch refresh of LazyLoadColumn into background and update display when completed.
-    */
-   public void refreshColumnLazy(final IXViewerLazyLoadColumn preCompColumn) {
-      refreshColumnLazy(preCompColumn, getInput());
+   public void refreshColumnsWithPreCompute() {
+      refreshColumnsWithPreCompute(getInput());
    }
 
-   /**
-    * Launch refresh of LazyLoadColumn into background and update display when completed.
-    */
-   public void refreshColumnLazy(final IXViewerLazyLoadColumn preCompColumn, Object input) {
-      System.err.println("Lazy loading " + preCompColumn);
-      final XViewerColumn column = (XViewerColumn) preCompColumn;
-      if (input instanceof Collection<?>) {
-         final Collection<?> collection = (Collection<?>) input;
-         if (column.lazyLoadingValueMap == null) {
-            column.lazyLoadingValueMap = new HashMap<Long, String>(collection.size());
-         } else {
-            column.lazyLoadingValueMap.clear();
-         }
+   public void refreshColumnsWithPreCompute(final Object input) {
+      final List<Object> inputObjects = getInputObjects(input);
+      final XViewer xViewer = this;
+      this.loading = true;
 
-         Job job = new Job("Computing Lazy Loading Columns") {
+      if (forcePend) {
+         performPreCompute(inputObjects);
+         performLoad(inputObjects, xViewer);
+      } else {
+         Job job = new Job("Refreshing Columns") {
 
             @Override
             protected IStatus run(IProgressMonitor monitor) {
-               preCompColumn.populateCachedValues(collection, column.lazyLoadingValueMap);
+               performPreCompute(inputObjects);
                return Status.OK_STATUS;
             }
+
          };
          job.setSystem(false);
          job.addJobChangeListener(new JobChangeAdapter() {
@@ -347,12 +355,35 @@ public class XViewer extends TreeViewer {
 
                   @Override
                   public void run() {
-                     refreshColumn(column);
+                     performLoad(input, xViewer);
                   }
+
                });
             }
          });
          job.schedule();
+      }
+   }
+
+   private void performPreCompute(final List<Object> inputObjects) {
+      for (XViewerColumn column : getCustomizeMgr().getCurrentVisibleTableColumns()) {
+         if (column instanceof IXViewerPreComputedColumn) {
+            IXViewerPreComputedColumn preComputedColumn = (IXViewerPreComputedColumn) column;
+            if (column.getPreComputedValueMap() == null) {
+               column.setPreComputedValueMap(new HashMap<Long, String>(inputObjects.size()));
+            } else {
+               column.getPreComputedValueMap().clear();
+            }
+            preComputedColumn.populateCachedValues(inputObjects, column.getPreComputedValueMap());
+         }
+      }
+   }
+
+   private void performLoad(final Object input, final XViewer xViewer) {
+      if (xViewer.getTree() != null && !xViewer.getTree().isDisposed()) {
+         xViewer.superInputChanged(input);
+         loading = false;
+         updateStatusLabel();
       }
    }
 
@@ -454,6 +485,7 @@ public class XViewer extends TreeViewer {
    };
    private Composite searchComp;
    private XViewerMouseListener mouseListener;
+   private boolean loading;
 
    public void resetDefaultSorter() {
       customizeMgr.resetDefaultSorter();
@@ -474,8 +506,14 @@ public class XViewer extends TreeViewer {
       }
    }
 
+   /**
+    * setInputXViewer(Object input) should be called for setting input to XViewer.
+    *
+    * @param objects
+    */
+   @Deprecated
    public void load(Collection<Object> objects) {
-      super.setInput(objects);
+      setInputXViewer(objects);
    }
 
    @Override
@@ -570,42 +608,71 @@ public class XViewer extends TreeViewer {
          return;
       }
       StringBuffer sb = new StringBuffer();
+      boolean allItemsFiltered = false;
 
-      // Status Line 1
-      int loadedNum = 0;
-      int visibleNum = getVisibleItemCount(getTree().getItems());
-      if (getRoot() != null && ((ITreeContentProvider) getContentProvider()) != null) {
-         loadedNum = ((ITreeContentProvider) getContentProvider()).getChildren(getRoot()).length;
-      }
-      boolean allItemsFiltered = loadedNum > 0 && visibleNum == 0;
-      if (allItemsFiltered) {
-         sb.append(XViewerText.get("status.all_filtered")); //$NON-NLS-1$
-      }
-      sb.append(MessageFormat.format(XViewerText.get("status"), loadedNum, visibleNum, //$NON-NLS-1$
-         ((IStructuredSelection) getSelection()).size()));
-      customizeMgr.appendToStatusLabel(sb);
-      if (filterDataUI != null) {
-         filterDataUI.appendToStatusLabel(sb);
-      }
-      columnFilterDataUI.appendToStatusLabel(sb);
-      sb.append(getStatusString());
-      if (sb.length() > 0) {
-         sb.append("\n"); //$NON-NLS-1$
-      }
+      if (loading) {
+         sb.append("Loading...");
+      } else {
+         // Status Line 1
+         int loadedNum = 0;
+         int visibleNum = getVisibleItemCount(getTree().getItems());
+         if (getRoot() != null && ((ITreeContentProvider) getContentProvider()) != null) {
+            loadedNum = ((ITreeContentProvider) getContentProvider()).getChildren(getRoot()).length;
+         }
+         allItemsFiltered = loadedNum > 0 && visibleNum == 0;
+         if (allItemsFiltered) {
+            sb.append(XViewerText.get("status.all_filtered")); //$NON-NLS-1$
+         }
+         sb.append(MessageFormat.format(XViewerText.get("status"), loadedNum, visibleNum, //$NON-NLS-1$
+            ((IStructuredSelection) getSelection()).size()));
+         customizeMgr.appendToStatusLabel(sb);
+         if (filterDataUI != null) {
+            filterDataUI.appendToStatusLabel(sb);
+         }
+         columnFilterDataUI.appendToStatusLabel(sb);
+         sb.append(getStatusString());
+         if (sb.length() > 0) {
+            sb.append("\n"); //$NON-NLS-1$
+         }
 
-      // Status Line 2
-      customizeMgr.getSortingStr(sb);
+         // Status Line 2
+         customizeMgr.getSortingStr(sb);
+      }
 
       // Display status lines
       String str = sb.toString();
       statusLabel.setText(str);
       statusLabel.getParent().getParent().layout();
       statusLabel.setToolTipText(str);
-      if (allItemsFiltered) {
+      if (loading) {
+         statusLabel.setForeground(Display.getCurrent().getSystemColor(SWT.COLOR_BLUE));
+      } else if (allItemsFiltered) {
          statusLabel.setForeground(Display.getCurrent().getSystemColor(SWT.COLOR_RED));
       } else {
          statusLabel.setForeground(Display.getCurrent().getSystemColor(SWT.COLOR_BLACK));
       }
+   }
+
+   private MouseAdapter getCustomizationMouseListener() {
+      return new MouseAdapter() {
+
+         @Override
+         public void mouseUp(MouseEvent mouseEvent) {
+            if (mouseEvent.button == 3 && mouseEvent.count == 1) {
+               CustomizeData custData = getCustomizeMgr().getCurrentCustomizeData();
+               List<XViewerColumn> currentVisibleTableColumns = getCustomizeMgr().getCurrentVisibleTableColumns();
+               custData.getColumnData().getColumns().clear();
+               custData.getColumnData().getColumns().addAll(currentVisibleTableColumns);
+               String custStr = custData.toString();
+               custStr = custStr.replaceAll("XView", "\nXView");
+               custStr = custStr.replaceFirst("guid", "\nguid");
+               String html = HtmlUtil.simplePage(HtmlUtil.getPreData(custStr));
+               String title = String.format("Customization [%s]-[%s]", custData.getName(), custData.getGuid());
+               new HtmlDialog(title, title, html).open();
+            }
+         }
+
+      };
    }
 
    public String getViewerNamespace() {
@@ -770,9 +837,8 @@ public class XViewer extends TreeViewer {
                   try {
                      value = labelProvider.getColumnText(item.getData(), column.getSecond());
                   } catch (Exception ex) {
-                     value =
-                        String.format("Exception getting value from column [%s][%s]", column.getFirst().getId(),
-                           ex.getLocalizedMessage());
+                     value = String.format("Exception getting value from column [%s][%s]", column.getFirst().getId(),
+                        ex.getLocalizedMessage());
                   }
                   if (value != null) {
                      cell.setText(value);
@@ -811,6 +877,14 @@ public class XViewer extends TreeViewer {
 
    public XViewerMouseListener getMouseListener() {
       return mouseListener;
+   }
+
+   public boolean isForcePend() {
+      return forcePend;
+   }
+
+   public void setForcePend(boolean forcePend) {
+      this.forcePend = forcePend;
    }
 
 }
