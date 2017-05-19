@@ -37,6 +37,7 @@ import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.ViewerCell;
 import org.eclipse.jface.viewers.ViewerRow;
 import org.eclipse.jface.viewers.ViewerSorter;
+import org.eclipse.nebula.widgets.xviewer.action.TableCustomizationAction;
 import org.eclipse.nebula.widgets.xviewer.action.TableCustomizationDropDownAction;
 import org.eclipse.nebula.widgets.xviewer.column.XViewerDaysTillTodayColumn;
 import org.eclipse.nebula.widgets.xviewer.column.XViewerDiffsBetweenColumnsColumn;
@@ -227,6 +228,10 @@ public class XViewer extends TreeViewer {
       return new TableCustomizationDropDownAction(this);
    }
 
+   public Action getCustomizeActionWithoutDropDown() {
+      return new TableCustomizationAction(this);
+   }
+
    public void addCustomizeToViewToolbar(IToolBarManager toolbarManager) {
       toolbarManager.add(new TableCustomizationDropDownAction(this));
    }
@@ -320,6 +325,11 @@ public class XViewer extends TreeViewer {
          for (Object obj : collection) {
             objects.add(obj);
          }
+      } else if (input instanceof Object[]) {
+         Object[] arr = (Object[]) input;
+         for (Object obj : arr) {
+            objects.add(obj);
+         }
       }
       return objects;
    }
@@ -333,40 +343,43 @@ public class XViewer extends TreeViewer {
       final XViewer xViewer = this;
       this.loading = true;
 
-      if (forcePend) {
-         performPreCompute(inputObjects);
-         performLoad(inputObjects, xViewer);
-      } else {
-         Job job = new Job("Refreshing Columns") {
+      if (!inputObjects.isEmpty()) {
+         if (forcePend) {
+            performPreCompute(inputObjects);
+            performLoad(inputObjects, xViewer);
+         } else {
+            Job job = new Job("Refreshing Columns") {
 
-            @Override
-            protected IStatus run(IProgressMonitor monitor) {
-               performPreCompute(inputObjects);
-               return Status.OK_STATUS;
-            }
+               @Override
+               protected IStatus run(IProgressMonitor monitor) {
+                  performPreCompute(inputObjects);
+                  return Status.OK_STATUS;
+               }
 
-         };
-         job.setSystem(false);
-         job.addJobChangeListener(new JobChangeAdapter() {
+            };
+            job.setSystem(false);
+            job.addJobChangeListener(new JobChangeAdapter() {
 
-            @Override
-            public void done(IJobChangeEvent event) {
-               Display.getDefault().asyncExec(new Runnable() {
+               @Override
+               public void done(IJobChangeEvent event) {
+                  Display.getDefault().asyncExec(new Runnable() {
 
-                  @Override
-                  public void run() {
-                     performLoad(input, xViewer);
-                  }
+                     @Override
+                     public void run() {
+                        performLoad(input, xViewer);
+                     }
 
-               });
-            }
-         });
-         job.schedule();
+                  });
+               }
+            });
+            job.schedule();
+         }
       }
    }
 
    private void performPreCompute(final List<Object> inputObjects) {
-      for (XViewerColumn column : getCustomizeMgr().getCurrentVisibleTableColumns()) {
+      List<XViewerColumn> currentVisibleTableColumns = getCustomizeMgr().getCurrentVisibleTableColumns();
+      for (XViewerColumn column : currentVisibleTableColumns) {
          if (column instanceof IXViewerPreComputedColumn) {
             IXViewerPreComputedColumn preComputedColumn = (IXViewerPreComputedColumn) column;
             if (column.getPreComputedValueMap() == null) {
@@ -374,7 +387,14 @@ public class XViewer extends TreeViewer {
             } else {
                column.getPreComputedValueMap().clear();
             }
-            preComputedColumn.populateCachedValues(inputObjects, column.getPreComputedValueMap());
+            if (!inputObjects.isEmpty()) {
+               try {
+                  preComputedColumn.populateCachedValues(inputObjects, column.getPreComputedValueMap());
+               } catch (Exception ex) {
+                  XViewerLog.log(Activator.class, Level.SEVERE,
+                     String.format("Error performing pre-compute for column %s", column), ex);
+               }
+            }
          }
       }
    }
@@ -651,6 +671,11 @@ public class XViewer extends TreeViewer {
       } else {
          statusLabel.setForeground(Display.getCurrent().getSystemColor(SWT.COLOR_BLACK));
       }
+   }
+
+   public void setLoading(boolean loading) {
+      this.loading = loading;
+      updateStatusLabel();
    }
 
    private MouseAdapter getCustomizationMouseListener() {

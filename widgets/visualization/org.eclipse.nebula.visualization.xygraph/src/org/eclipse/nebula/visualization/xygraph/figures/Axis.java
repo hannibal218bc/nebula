@@ -59,7 +59,7 @@ public class Axis extends LinearScale {
 		this.scaleFontData = getFont().getFontData()[0];
 	}
 
-	final private List<Trace> traceList = new ArrayList<Trace>();
+	private final List<Trace> traceList = new ArrayList<Trace>();
 
 	private IXYGraph xyGraph;
 	private Grid grid;
@@ -77,6 +77,8 @@ public class Axis extends LinearScale {
 
 	private boolean showMinorGrid = false;
 
+	private boolean isInverted = false;
+
 	private Color majorGridColor;
 
 	private Color minorGridColor;
@@ -85,7 +87,7 @@ public class Axis extends LinearScale {
 
 	private double autoScaleThreshold = 0.01;
 
-	final private List<IAxisListener> listeners = new ArrayList<IAxisListener>();
+	protected final List<IAxisListener> listeners = new ArrayList<IAxisListener>();
 
 	private ZoomType zoomType = ZoomType.NONE;
 
@@ -129,8 +131,8 @@ public class Axis extends LinearScale {
 		addMouseMotionListener(panner);
 		grabbing = XYGraphMediaFactory.getInstance().getCursor(XYGraphMediaFactory.CURSOR_GRABBING_ON_AXIS_PATH);
 		Font sysFont = Display.getCurrent().getSystemFont();
-		titleFont = XYGraphMediaFactory.getInstance().getFont(
-				new FontData(sysFont.getFontData()[0].getName(), 12, SWT.BOLD)); //$NON-NLS-1$
+		titleFont = XYGraphMediaFactory.getInstance()
+				.getFont(new FontData(sysFont.getFontData()[0].getName(), 12, SWT.BOLD)); // $NON-NLS-1$
 		if (getBackgroundColor() != null) {
 			RGB backRGB = getBackgroundColor().getRGB();
 			revertBackColor = XYGraphMediaFactory.getInstance().getColor(255 - backRGB.red, 255 - backRGB.green,
@@ -150,12 +152,12 @@ public class Axis extends LinearScale {
 		return listeners.remove(listener);
 	}
 
-	private void fireRevalidated() {
+	protected void fireRevalidated() {
 		for (IAxisListener listener : listeners)
 			listener.axisRevalidated(this);
 	}
 
-	private void fireAxisRangeChanged(final Range old_range, final Range new_range) {
+	protected void fireAxisRangeChanged(final Range old_range, final Range new_range) {
 		for (IAxisListener listener : listeners)
 			listener.axisRangeChanged(this, old_range, new_range);
 	}
@@ -165,6 +167,33 @@ public class Axis extends LinearScale {
 		Range old_range = getRange();
 		super.setRange(lower, upper);
 		fireAxisRangeChanged(old_range, getRange());
+	}
+
+	/**
+	 * Inverts the axis if set to True
+	 * 
+	 * @param isInverted
+	 */
+	public void setInverted(boolean isInverted) {
+		if (this.isInverted == isInverted)
+			return;
+
+		this.isInverted = isInverted;
+		double min = getRange().getLower();
+		double max = getRange().getUpper();
+		if ((isInverted && (min < max)) || (!isInverted && (min > max))) {
+			setRange(new Range(max, min));
+		}
+		xyGraph.repaint();
+	}
+
+	/**
+	 * Returns True if axis is inverted, False otherwise
+	 * 
+	 * @return
+	 */
+	public boolean isInverted() {
+		return isInverted;
 	}
 
 	@Override
@@ -245,8 +274,8 @@ public class Axis extends LinearScale {
 		final Dimension titleSize = FigureUtilities.getTextExtents(title, titleFont);
 		if (isHorizontal()) {
 			if (getTickLabelSide() == LabelSide.Primary)
-				graphics.drawText(title, bounds.x + bounds.width / 2 - titleSize.width / 2, bounds.y + bounds.height
-						- titleSize.height);
+				graphics.drawText(title, bounds.x + bounds.width / 2 - titleSize.width / 2,
+						bounds.y + bounds.height - titleSize.height);
 			else
 				graphics.drawText(title, bounds.x + bounds.width / 2 - titleSize.width / 2, bounds.y);
 		} else {
@@ -256,8 +285,8 @@ public class Axis extends LinearScale {
 			if (getTickLabelSide() == LabelSide.Primary) {
 				GraphicsUtil.drawVerticalText(graphics, title, bounds.x, bounds.y + bounds.height / 2 - h / 2, false);
 			} else {
-				GraphicsUtil.drawVerticalText(graphics, title, bounds.x + bounds.width - w, bounds.y + bounds.height
-						/ 2 - h / 2, true);
+				GraphicsUtil.drawVerticalText(graphics, title, bounds.x + bounds.width - w,
+						bounds.y + bounds.height / 2 - h / 2, true);
 			}
 		}
 
@@ -398,11 +427,9 @@ public class Axis extends LinearScale {
 		}
 
 		// Any change at all?
-		if ((Double.doubleToLongBits(tempMin) == Double.doubleToLongBits(min) && Double.doubleToLongBits(tempMax) == Double
-				.doubleToLongBits(max))
-				|| Double.isInfinite(tempMin)
-				|| Double.isInfinite(tempMax)
-				|| Double.isNaN(tempMin) || Double.isNaN(tempMax))
+		if ((Double.doubleToLongBits(tempMin) == Double.doubleToLongBits(min)
+				&& Double.doubleToLongBits(tempMax) == Double.doubleToLongBits(max)) || Double.isInfinite(tempMin)
+				|| Double.isInfinite(tempMax) || Double.isNaN(tempMin) || Double.isNaN(tempMax))
 			return false;
 
 		if (isLogScaleEnabled()) { // Revert from log space
@@ -426,6 +453,7 @@ public class Axis extends LinearScale {
 		if (traceList.contains(trace))
 			return;
 		traceList.add(trace);
+		addListener(trace);
 		performAutoScale(false);
 	}
 
@@ -437,6 +465,7 @@ public class Axis extends LinearScale {
 	 */
 	public boolean removeTrace(final Trace trace) {
 		final boolean r = traceList.remove(trace);
+		removeListener(trace);
 		performAutoScale(false);
 		return r;
 	}
@@ -604,6 +633,13 @@ public class Axis extends LinearScale {
 	}
 
 	/**
+	 * @return xyGraph
+	 */
+	public IXYGraph getXyGraph() {
+		return xyGraph;
+	}
+
+	/**
 	 * Use {@link #setXyGraph(IXYGraph)} instead
 	 * 
 	 * @param xyGraph
@@ -612,6 +648,13 @@ public class Axis extends LinearScale {
 	@Deprecated
 	public void setXyGraph(final XYGraph xyGraph) {
 		this.xyGraph = xyGraph;
+	}
+
+	/**
+	 * @return traceList
+	 */
+	protected List<Trace> getTraceList() {
+		return traceList;
 	}
 
 	@Override
@@ -646,13 +689,12 @@ public class Axis extends LinearScale {
 	 * @return <code>true</code> if the zoom type is applicable to this axis
 	 */
 	private boolean isValidZoomType(final ZoomType zoom) {
-		return zoom == ZoomType.PANNING
-				|| zoom == ZoomType.RUBBERBAND_ZOOM
-				|| zoom == ZoomType.DYNAMIC_ZOOM
-				|| zoom == ZoomType.ZOOM_IN
-				|| zoom == ZoomType.ZOOM_OUT
-				|| (isHorizontal() && (zoom == ZoomType.HORIZONTAL_ZOOM || zoom == ZoomType.ZOOM_IN_HORIZONTALLY || zoom == ZoomType.ZOOM_OUT_HORIZONTALLY))
-				|| (!isHorizontal() && (zoom == ZoomType.VERTICAL_ZOOM || zoom == ZoomType.ZOOM_OUT_VERTICALLY || zoom == ZoomType.ZOOM_IN_VERTICALLY));
+		return zoom == ZoomType.PANNING || zoom == ZoomType.RUBBERBAND_ZOOM || zoom == ZoomType.DYNAMIC_ZOOM
+				|| zoom == ZoomType.ZOOM_IN || zoom == ZoomType.ZOOM_OUT
+				|| (isHorizontal() && (zoom == ZoomType.HORIZONTAL_ZOOM || zoom == ZoomType.ZOOM_IN_HORIZONTALLY
+						|| zoom == ZoomType.ZOOM_OUT_HORIZONTALLY))
+				|| (!isHorizontal() && (zoom == ZoomType.VERTICAL_ZOOM || zoom == ZoomType.ZOOM_OUT_VERTICALLY
+						|| zoom == ZoomType.ZOOM_IN_VERTICALLY));
 	}
 
 	/**
@@ -683,6 +725,13 @@ public class Axis extends LinearScale {
 	}
 
 	/**
+	 * @return autoScale
+	 */
+	public boolean getAutoScale() {
+		return autoScale;
+	}
+
+	/**
 	 * Set this axis as Y-Axis or X-Axis.
 	 * 
 	 * @param isYAxis
@@ -704,7 +753,7 @@ public class Axis extends LinearScale {
 	 *            is not on the primary side of xy graph(Top/Right).
 	 */
 	public void setPrimarySide(boolean onPrimarySide) {
-		setTickLableSide(onPrimarySide ? LabelSide.Primary : LabelSide.Secondary);
+		setTickLabelSide(onPrimarySide ? LabelSide.Primary : LabelSide.Secondary);
 	}
 
 	/**
@@ -740,7 +789,7 @@ public class Axis extends LinearScale {
 	 * @param t2
 	 *            End of the panning move
 	 */
-	void pan(final Range temp, double t1, double t2) {
+	protected void pan(final Range temp, double t1, double t2) {
 		if (isLogScaleEnabled()) {
 			final double m = Math.log10(t2) - Math.log10(t1);
 			t1 = Math.pow(10, Math.log10(temp.getLower()) - m);
@@ -811,6 +860,11 @@ public class Axis extends LinearScale {
 	}
 
 	/**
+	 * Field used to remember the previous zoom type used
+	 */
+	private ZoomType previousZoomType = ZoomType.NONE;
+
+	/**
 	 * Listener to mouse events, performs panning and some zooms Is very similar
 	 * to the PlotMouseListener, but unclear how easy/useful it would be to base
 	 * them on the same code.
@@ -821,8 +875,14 @@ public class Axis extends LinearScale {
 		@Override
 		public void mousePressed(final MouseEvent me) {
 			// Only react to 'main' mouse button, only react to 'real' zoom
-			if (me.button != 1 || !isValidZoomType(zoomType))
+			if ((me.button != PlotArea.BUTTON1 || !isValidZoomType(zoomType)) && me.button != PlotArea.BUTTON2)
 				return;
+			// Remember last used zoomtype
+			previousZoomType = zoomType;
+			// if mousewheel is pressed
+			if (me.button == PlotArea.BUTTON2) {
+				zoomType = ZoomType.PANNING;
+			}
 			armed = true;
 			// get start position
 			switch (zoomType) {
@@ -955,6 +1015,11 @@ public class Axis extends LinearScale {
 			default:
 				break;
 			}
+			// mousewheel is pressed and last zoom type was not panning, we set
+			// the zoomtype to the previous state.
+			if (me.button == PlotArea.BUTTON2 && previousZoomType != ZoomType.PANNING) {
+				setZoomType(previousZoomType);
+			}
 			command.saveState();
 			xyGraph.getOperationsManager().addCommand(command);
 			command = null;
@@ -966,7 +1031,16 @@ public class Axis extends LinearScale {
 		private void performStartEndZoom() {
 			final double t1 = getPositionValue(isHorizontal() ? start.x : start.y, false);
 			final double t2 = getPositionValue(isHorizontal() ? end.x : end.y, false);
-			setRange(t1, t2, true);
+			// Properly set the range given the values of t1 and t2: if the
+			// maximum value of the range is smaller than the minimum,
+			// accordingly set the min and max given the values of t1 and t2 and
+			// vice versa.
+			boolean isMinBigger = getRange().isMinBigger();
+			if (isMinBigger == (t1 > t2)) {
+				setRange(t1, t2);
+			} else {
+				setRange(t2, t1);
+			}
 		}
 
 		/** Perform the in or out zoom according to zoomType */

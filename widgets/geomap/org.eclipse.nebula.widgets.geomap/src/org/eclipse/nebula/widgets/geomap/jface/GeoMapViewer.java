@@ -19,6 +19,7 @@ import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.LabelProviderChangedEvent;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.window.DefaultToolTip;
 import org.eclipse.jface.window.ToolTip;
@@ -293,6 +294,11 @@ public class GeoMapViewer extends ContentViewer {
 	}
 
 	@Override
+    protected void inputChanged(Object input, Object oldInput) {
+		refresh();
+    }
+
+	@Override
 	public void setSelection(ISelection selection, boolean reveal) {
 		setSelection(selection instanceof IStructuredSelection ? ((IStructuredSelection) selection).getFirstElement() : null);
 		if (reveal && this.selection != null) {
@@ -327,6 +333,7 @@ public class GeoMapViewer extends ContentViewer {
 	private void setSelection(Object selection) {
 		this.selection = selection;
 		refresh();
+		fireSelectionChanged(new SelectionChangedEvent(this, new StructuredSelection(selection)));
 	}
 
 	//
@@ -395,7 +402,6 @@ public class GeoMapViewer extends ContentViewer {
 		}
 
 		private Point selectionStart = null;
-		private Point oldPosition;
 		
 		private boolean isSelecting() {
 			return selectionOffset != null;
@@ -433,8 +439,11 @@ public class GeoMapViewer extends ContentViewer {
 		@Override
 		public void mouseUp(MouseEvent e) {
 			if (isSelecting()) {
-				Point newPosition = new Point(oldPosition.x + selectionOffset.x, oldPosition.y + selectionOffset.y);
-				PointD lonLat = GeoMapUtil.getLongitudeLatitude(newPosition, geoMap.getZoom());
+				PointD lonLat = getLocationProvider().getLonLat(selection);
+				int zoom = geoMap.getZoom();
+				Point position = GeoMapUtil.computePosition(lonLat, zoom);
+				Point newPosition = new Point(position.x + selectionOffset.x, position.y + selectionOffset.y);
+				lonLat = GeoMapUtil.getLongitudeLatitude(newPosition, zoom);
 				@SuppressWarnings("unused")
 				boolean changed = getLocationProvider().setLonLat(selection, lonLat.x, lonLat.y);
 				reveal(selection, checkButtons(e, getPanCenterButtons()));

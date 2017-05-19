@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010 Oak Ridge National Laboratory.
+ * Copyright (c) 2010, 2017 Oak Ridge National Laboratory and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -72,7 +72,7 @@ public class XYGraphToolbar extends Figure {
 	 * @see XYGraphFlags#SEPARATE_ZOOM
 	 */
 	public XYGraphToolbar(final IXYGraph xyGraph, final int flags) {
-		this((XYGraph)xyGraph, flags);
+		this((XYGraph) xyGraph, flags);
 	}
 
 	/**
@@ -101,8 +101,21 @@ public class XYGraphToolbar extends Figure {
 			}
 		});
 
-		final Button addAnnotationButton = new Button(XYGraphMediaFactory.getInstance().getImage(
-				"images/Add_Annotation.png"));
+		final ToggleButton showLegend = new ToggleButton("",
+				XYGraphMediaFactory.getInstance().getImage("images/ShowLegend.png"));
+		showLegend.setToolTip(new Label("Show Legend"));
+		addButton(showLegend);
+		showLegend.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				xyGraph.setShowLegend(!xyGraph.isShowLegend());
+			}
+		});
+
+		showLegend.setSelected(xyGraph.isShowLegend());
+
+		addSeparator();
+		final Button addAnnotationButton = new Button(
+				XYGraphMediaFactory.getInstance().getImage("images/Add_Annotation.png"));
 		addAnnotationButton.setToolTip(new Label("Add Annotation..."));
 		addButton(addAnnotationButton);
 		addAnnotationButton.addActionListener(new ActionListener() {
@@ -116,8 +129,8 @@ public class XYGraphToolbar extends Figure {
 			}
 		});
 
-		final Button delAnnotationButton = new Button(XYGraphMediaFactory.getInstance().getImage(
-				"images/Del_Annotation.png"));
+		final Button delAnnotationButton = new Button(
+				XYGraphMediaFactory.getInstance().getImage("images/Del_Annotation.png"));
 		delAnnotationButton.setToolTip(new Label("Remove Annotation..."));
 		addButton(delAnnotationButton);
 		delAnnotationButton.addActionListener(new ActionListener() {
@@ -126,8 +139,8 @@ public class XYGraphToolbar extends Figure {
 						xyGraph);
 				if (dialog.open() == Window.OK && dialog.getAnnotation() != null) {
 					xyGraph.removeAnnotation(dialog.getAnnotation());
-					xyGraph.getOperationsManager().addCommand(
-							new RemoveAnnotationCommand(xyGraph, dialog.getAnnotation()));
+					xyGraph.getOperationsManager()
+							.addCommand(new RemoveAnnotationCommand(xyGraph, dialog.getAnnotation()));
 				}
 			}
 		});
@@ -143,8 +156,8 @@ public class XYGraphToolbar extends Figure {
 				}
 			});
 		} else { // auto scale button
-			final Button autoScaleButton = new Button(XYGraphMediaFactory.getInstance()
-					.getImage("images/AutoScale.png"));
+			final Button autoScaleButton = new Button(
+					XYGraphMediaFactory.getInstance().getImage("images/AutoScale.png"));
 			autoScaleButton.setToolTip(new Label("Perform Auto Scale"));
 			addButton(autoScaleButton);
 			autoScaleButton.addActionListener(new ActionListener() {
@@ -197,8 +210,8 @@ public class XYGraphToolbar extends Figure {
 
 	private void addUndoRedoButtons() {
 		// undo button
-		final GrayableButton undoButton = new GrayableButton(XYGraphMediaFactory.getInstance().getImage(
-				"images/Undo.png"), //$NON-NLS-1$
+		final GrayableButton undoButton = new GrayableButton(
+				XYGraphMediaFactory.getInstance().getImage("images/Undo.png"), //$NON-NLS-1$
 				XYGraphMediaFactory.getInstance().getImage("images/Undo_Gray.png")); //$NON-NLS-1$
 		undoButton.setToolTip(new Label("Undo"));
 		undoButton.setEnabled(false);
@@ -222,8 +235,8 @@ public class XYGraphToolbar extends Figure {
 		});
 
 		// redo button
-		final GrayableButton redoButton = new GrayableButton(XYGraphMediaFactory.getInstance().getImage(
-				"images/Redo.png"),//$NON-NLS-1$
+		final GrayableButton redoButton = new GrayableButton(
+				XYGraphMediaFactory.getInstance().getImage("images/Redo.png"), //$NON-NLS-1$
 				XYGraphMediaFactory.getInstance().getImage("images/Redo_Gray.png")); //$NON-NLS-1$
 		redoButton.setToolTip(new Label("Redo"));
 		redoButton.setEnabled(false);
@@ -310,8 +323,8 @@ public class XYGraphToolbar extends Figure {
 			super.paintClientArea(graphics);
 			graphics.setForegroundColor(GRAY_COLOR);
 			graphics.setLineWidth(1);
-			graphics.drawLine(bounds.x + bounds.width / 2, bounds.y, bounds.x + bounds.width / 2, bounds.y
-					+ bounds.height);
+			graphics.drawLine(bounds.x + bounds.width / 2, bounds.y, bounds.x + bounds.width / 2,
+					bounds.y + bounds.height);
 		}
 	}
 }

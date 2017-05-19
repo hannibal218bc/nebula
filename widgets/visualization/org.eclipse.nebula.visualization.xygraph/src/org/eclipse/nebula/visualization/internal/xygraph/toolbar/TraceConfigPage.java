@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010 Oak Ridge National Laboratory.
+ * Copyright (c) 2010, 2017 Oak Ridge National Laboratory and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -13,11 +13,11 @@ import org.eclipse.jface.preference.ColorSelector;
 import org.eclipse.nebula.visualization.xygraph.figures.Axis;
 import org.eclipse.nebula.visualization.xygraph.figures.IXYGraph;
 import org.eclipse.nebula.visualization.xygraph.figures.Trace;
-import org.eclipse.nebula.visualization.xygraph.figures.XYGraph;
 import org.eclipse.nebula.visualization.xygraph.figures.Trace.BaseLine;
 import org.eclipse.nebula.visualization.xygraph.figures.Trace.ErrorBarType;
 import org.eclipse.nebula.visualization.xygraph.figures.Trace.PointStyle;
 import org.eclipse.nebula.visualization.xygraph.figures.Trace.TraceType;
+import org.eclipse.nebula.visualization.xygraph.figures.XYGraph;
 import org.eclipse.nebula.visualization.xygraph.util.XYGraphMediaFactory;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionAdapter;
@@ -37,9 +37,10 @@ import org.eclipse.swt.widgets.Text;
  * properties.
  * 
  * @author Xihui Chen
+ * @author Baha El-Kassaby - make TraceConfigPage implement ITraceConfigPage
  *
  */
-public class TraceConfigPage {
+public class TraceConfigPage implements ITraceConfigPage {
 	private XYGraph xyGraph;
 	private Trace trace;
 	private Text nameText;
@@ -61,6 +62,8 @@ public class TraceConfigPage {
 	private Spinner errorBarCapWidthSpinner;
 	private Button drawYErrorInAreaButton;
 
+	private Button visible;
+
 	private Composite composite;
 
 	public TraceConfigPage(IXYGraph xyGraph, Trace trace) {
@@ -79,6 +82,7 @@ public class TraceConfigPage {
 		this.trace = trace;
 	}
 
+	@Override
 	public void createPage(final Composite composite) {
 		this.composite = composite;
 		composite.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -95,6 +99,10 @@ public class TraceConfigPage {
 
 		GridData gd;
 		GridData labelGd = new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1);
+
+		visible = new Button(traceCompo, SWT.CHECK);
+		visible.setText("Visible");
+		visible.setLayoutData(new GridData(SWT.FILL, SWT.BEGINNING, true, false, 3, 1));
 
 		final Label nameLabel = new Label(traceCompo, 0);
 		nameLabel.setText("Name: ");
@@ -173,10 +181,10 @@ public class TraceConfigPage {
 		gd = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
 		pointStyleCombo.setLayoutData(gd);
 
-		final Label pointSizeLable = new Label(traceCompo, 0);
-		pointSizeLable.setText("Point Size (pixels): ");
+		final Label pointSizeLabel = new Label(traceCompo, 0);
+		pointSizeLabel.setText("Point Size (pixels): ");
 		labelGd = new GridData(SWT.FILL, SWT.CENTER, false, false, 2, 1);
-		pointSizeLable.setLayoutData(labelGd);
+		pointSizeLabel.setLayoutData(labelGd);
 
 		pointSizeSpinner = new Spinner(traceCompo, SWT.BORDER);
 		pointSizeSpinner.setMaximum(100);
@@ -195,10 +203,10 @@ public class TraceConfigPage {
 		gd = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
 		baseLineCombo.setLayoutData(gd);
 
-		final Label alphaLable = new Label(traceCompo, 0);
-		alphaLable.setText("Area Alpha: ");
+		final Label alphaLabel = new Label(traceCompo, 0);
+		alphaLabel.setText("Area Alpha: ");
 		labelGd = new GridData(SWT.FILL, SWT.CENTER, false, false, 1, 1);
-		alphaLable.setLayoutData(labelGd);
+		alphaLabel.setLayoutData(labelGd);
 
 		areaAlphaSpinner = new Spinner(traceCompo, SWT.BORDER);
 		areaAlphaSpinner.setMaximum(255);
@@ -270,16 +278,30 @@ public class TraceConfigPage {
 		drawYErrorInAreaButton = new Button(errorBarGroup, SWT.CHECK);
 		drawYErrorInAreaButton.setText("Draw Y Error In Area");
 		drawYErrorInAreaButton.setLayoutData(new GridData(SWT.BEGINNING, SWT.BEGINNING, false, false, 2, 1));
+
+		// add potential custom button if necessary by overriding this method to
+		// the left composite
+		addCustomButton(traceCompo);
+
 		initialize();
 	}
 
 	/**
-	 * @return the composite
+	 * Override this method if a custom set of buttons need to be added to the
+	 * trace page.
+	 *
+	 * @param composite
 	 */
+	public void addCustomButton(Composite composite) {
+		// do nothing
+	}
+
+	@Override
 	public Composite getComposite() {
 		return composite;
 	}
 
+	@Override
 	public void applyChanges() {
 		trace.setName(nameText.getText());
 		trace.setXAxis(xyGraph.getXAxisList().get(xAxisCombo.getSelectionIndex()));
@@ -298,6 +320,11 @@ public class TraceConfigPage {
 		trace.setErrorBarColor(XYGraphMediaFactory.getInstance().getColor(errorBarColorSelector.getColorValue()));
 		trace.setErrorBarCapWidth(errorBarCapWidthSpinner.getSelection());
 		trace.setDrawYErrorInArea(drawYErrorInAreaButton.getSelection());
+
+		boolean vis = visible.getSelection();
+		if (vis != trace.isVisible())
+			trace.setVisible(vis);
+
 	}
 
 	private void initialize() {
@@ -326,6 +353,8 @@ public class TraceConfigPage {
 		errorBarCapWidthSpinner.setEnabled(enabled);
 		drawYErrorInAreaButton.setEnabled(enabled);
 
+		visible.setSelection(trace.isVisible());
+
 		updateBaseLineComboEnable();
 	}
 
@@ -333,6 +362,13 @@ public class TraceConfigPage {
 		baseLineCombo.setEnabled(traceTypeCombo.getSelectionIndex() == TraceType.BAR.ordinal()
 				|| traceTypeCombo.getSelectionIndex() == TraceType.AREA.ordinal()
 				|| traceTypeCombo.getSelectionIndex() == TraceType.LINE_AREA.ordinal());
+	}
+
+	/**
+	 * @return the trace
+	 */
+	public Trace getTrace() {
+		return trace;
 	}
 
 }

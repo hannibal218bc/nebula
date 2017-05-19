@@ -30,6 +30,7 @@ import org.eclipse.nebula.widgets.xviewer.XViewer;
 import org.eclipse.nebula.widgets.xviewer.XViewerColumnLabelProvider;
 import org.eclipse.nebula.widgets.xviewer.XViewerColumnSorter;
 import org.eclipse.nebula.widgets.xviewer.XViewerText;
+import org.eclipse.nebula.widgets.xviewer.core.model.ColumnData;
 import org.eclipse.nebula.widgets.xviewer.core.model.ColumnFilterData;
 import org.eclipse.nebula.widgets.xviewer.core.model.CustomizeData;
 import org.eclipse.nebula.widgets.xviewer.core.model.SortingData;
@@ -935,9 +936,18 @@ public class XViewerCustomizeDialog extends MessageDialog {
     */
    private List<XViewerColumn> getConfigCustXViewerColumns() {
       List<XViewerColumn> xCols = new ArrayList<XViewerColumn>();
+      List<XViewerColumn> currColumns = xViewerToCustomize.getCustomizeMgr().getCurrentTableColumns();
       for (XViewerColumn xCol : getTableXViewerColumns(visibleColTable.getViewer())) {
          xCol.setShow(true);
          xCol.setXViewer(xViewerToCustomize);
+
+         for (XViewerColumn currColumn : currColumns) {
+            if (currColumn.getId().equals(xCol.getId())) {
+               if (!currColumn.isSortForward()) {
+                  xCol.setSortForward(false);
+               }
+            }
+         }
          xCols.add(xCol);
       }
       for (XViewerColumn xCol : getTableXViewerColumns(hiddenColTable.getViewer())) {
@@ -1024,12 +1034,19 @@ public class XViewerCustomizeDialog extends MessageDialog {
       if (columnFilterText != null) {
          custData.getColumnFilterData().setFromXml(columnFilterText.getText());
       }
+
+      CustomizeData custTableSelection = getCustTableSelection();
+      if (custData.getColumnData().getColumns().equals(custTableSelection.getColumnData().getColumns())) {
+         custData.setName(custTableSelection.getName());
+      } else {
+         custData.setName("Unsaved Custom");
+      }
       return custData;
    }
 
    private void handleLoadConfigCustButton() {
       xViewerToCustomize.getCustomizeMgr().loadCustomization(getConfigCustomizeCustData());
-      xViewerToCustomize.refresh();
+      xViewerToCustomize.refreshColumnsWithPreCompute();
    }
 
    /**

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010 Oak Ridge National Laboratory.
+ * Copyright (c) 2010, 2017 Oak Ridge National Laboratory and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@ import java.beans.PropertyChangeListener;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.draw2d.ColorConstants;
 import org.eclipse.draw2d.FigureUtilities;
 import org.eclipse.draw2d.Graphics;
 import org.eclipse.draw2d.RectangleFigure;
@@ -47,7 +48,7 @@ public class Legend extends RectangleFigure {
 	private final List<Trace> traceList = new ArrayList<Trace>();
 
 	public Legend(IXYGraph xyGraph) {
-		this((XYGraph)xyGraph);
+		this((XYGraph) xyGraph);
 	}
 
 	/**
@@ -92,9 +93,17 @@ public class Legend extends RectangleFigure {
 
 	@Override
 	protected void outlineShape(Graphics graphics) {
-		graphics.setForegroundColor(traceList.get(0).getYAxis().getForegroundColor());
+		if (!isVisible())
+			return;
+		graphics.pushState();
+		if (!traceList.isEmpty()) {
+			Color fg = traceList.get(0).getYAxis().getForegroundColor();
+			if (fg == null)
+				fg = ColorConstants.black;
+			graphics.setForegroundColor(fg);
+		}
 		super.outlineShape(graphics);
-
+		graphics.popState();
 	}
 
 	@Override
@@ -105,6 +114,8 @@ public class Legend extends RectangleFigure {
 		int vPos = bounds.y + INNER_GAP;
 		int i = 0;
 		for (Trace trace : traceList) {
+			if (!trace.isVisible())
+				continue;
 			int hwidth = OUT_GAP + ICON_WIDTH + INNER_GAP
 					+ +FigureUtilities.getTextExtents(trace.getName(), getFont()).width;
 			int hEnd = hPos + hwidth;
@@ -119,47 +130,48 @@ public class Legend extends RectangleFigure {
 			// OUT_GAP,ICON_WIDTH-INNER_GAP);
 			// graphics.fillRectangle(rect);
 			// graphics.drawRectangle(rect);
-			drawTraceLagend(trace, graphics, hPos, vPos);
+			drawTraceLegend(trace, graphics, hPos, vPos);
 			hPos = hEnd;
 			i++;
 		}
 
 	}
 
-	private void drawTraceLagend(Trace trace, Graphics graphics, int hPos, int vPos) {
+	private void drawTraceLegend(Trace trace, Graphics graphics, int hPos, int vPos) {
 		graphics.pushState();
 		if (Preferences.useAdvancedGraphics())
 			graphics.setAntialias(SWT.ON);
 		graphics.setForegroundColor(trace.getTraceColor());
 
-        // limit size of symbol to ICON_WIDTH - INNER_GAP
-        int maxSize = ((trace.getPointSize() > Math.floor((ICON_WIDTH - OUT_GAP) / 2)) ? (int) Math.floor((ICON_WIDTH - OUT_GAP)) : trace
-                .getPointSize());
+		// limit size of symbol to ICON_WIDTH - INNER_GAP
+		int maxSize = ((trace.getPointSize() > Math.floor((ICON_WIDTH - OUT_GAP) / 2))
+				? (int) Math.floor((ICON_WIDTH - OUT_GAP))
+				: trace.getPointSize());
 
 		// draw symbol
 		switch (trace.getTraceType()) {
 		case BAR:
-			trace.drawLine(graphics, new Point(hPos + ICON_WIDTH / 2, vPos + maxSize / 2), new Point(hPos
-					+ ICON_WIDTH / 2, vPos + ICON_WIDTH));
+			trace.drawLine(graphics, new Point(hPos + ICON_WIDTH / 2, vPos + maxSize / 2),
+					new Point(hPos + ICON_WIDTH / 2, vPos + ICON_WIDTH));
 			trace.drawPoint(graphics, new Point(hPos + ICON_WIDTH / 2, vPos + maxSize / 2));
 			break;
 		case LINE_AREA:
-			graphics.drawPolyline(new int[] { hPos, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH / 2,
-					vPos + maxSize / 2, hPos + ICON_WIDTH - 1, vPos + ICON_WIDTH / 2, });
+			graphics.drawPolyline(new int[] { hPos, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH / 2, vPos + maxSize / 2,
+					hPos + ICON_WIDTH - 1, vPos + ICON_WIDTH / 2, });
 		case AREA:
 			graphics.setBackgroundColor(trace.getTraceColor());
 			if (Preferences.useAdvancedGraphics())
 				graphics.setAlpha(trace.getAreaAlpha());
-			graphics.fillPolygon(new int[] { hPos, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH / 2,
-					vPos + maxSize / 2, hPos + ICON_WIDTH, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH,
-					vPos + ICON_WIDTH, hPos, vPos + ICON_WIDTH });
+			graphics.fillPolygon(new int[] { hPos, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH / 2, vPos + maxSize / 2,
+					hPos + ICON_WIDTH, vPos + ICON_WIDTH / 2, hPos + ICON_WIDTH, vPos + ICON_WIDTH, hPos,
+					vPos + ICON_WIDTH });
 			if (Preferences.useAdvancedGraphics())
 				graphics.setAlpha(255);
 			trace.drawPoint(graphics, new Point(hPos + ICON_WIDTH / 2, vPos + maxSize / 2));
 			break;
 		default:
-			trace.drawLine(graphics, new Point(hPos, vPos + ICON_WIDTH / 2), new Point(hPos + ICON_WIDTH, vPos
-					+ ICON_WIDTH / 2));
+			trace.drawLine(graphics, new Point(hPos, vPos + ICON_WIDTH / 2),
+					new Point(hPos + ICON_WIDTH, vPos + ICON_WIDTH / 2));
 			trace.drawPoint(graphics, new Point(hPos + ICON_WIDTH / 2, vPos + ICON_WIDTH / 2));
 			break;
 		}
@@ -177,6 +189,8 @@ public class Legend extends RectangleFigure {
 		int height = ICON_WIDTH + INNER_GAP;
 		// int i=0;
 		for (Trace trace : traceList) {
+			if (!trace.isVisible())
+				continue;
 			hEnd = hEnd + OUT_GAP + ICON_WIDTH + INNER_GAP
 					+ +FigureUtilities.getTextExtents(trace.getName(), getFont()).width;
 

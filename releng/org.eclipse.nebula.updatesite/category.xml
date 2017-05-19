@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/org.eclipse.nebula.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.feature" version="1.0.0.qualifier">
-      <category name="Nebula Release all Widgets and Examples"/>
-   </feature>
    <feature url="features/org.eclipse.nebula.examples.release.feature_1.0.4.qualifier.jar" id="org.eclipse.nebula.examples.release.feature" version="1.0.4.qualifier">
       <category name="Nebula Release all Widgets and Examples"/>
    </feature>
@@ -21,7 +18,7 @@
    <feature url="features/org.eclipse.nebula.widgets.grid.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.widgets.grid.feature" version="1.0.0.qualifier">
       <category name="Nebula Release Individual Widgets"/>
    </feature>
-   <feature url="features/org.eclipse.nebula.widgets.richtext.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.widgets.richtext.feature" version="1.0.0.qualifier">
+   <feature url="features/org.eclipse.nebula.widgets.richtext.feature_1.2.0.qualifier.jar" id="org.eclipse.nebula.widgets.richtext.feature" version="1.2.0.qualifier">
       <category name="Nebula Release Individual Widgets"/>
    </feature>
    <feature url="features/org.eclipse.nebula.cwt.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.cwt.feature" version="1.0.0.qualifier">
@@ -53,6 +50,15 @@
    </feature>
    <feature url="features/org.eclipse.nebula.examples.feature_1.0.4.qualifier.jar" id="org.eclipse.nebula.examples.feature" version="1.0.4.qualifier">
       <category name="Nebula Examples View"/>
+   </feature>
+   <feature url="features/org.eclipse.nebula.effects.stw.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.effects.stw.feature" version="1.0.0.qualifier">
+      <category name="Nebula Release Individual Widgets"/>
+   </feature>
+   <feature url="features/org.eclipse.nebula.widgets.geomap.feature_1.0.0.qualifier.jar" id="org.eclipse.nebula.widgets.geomap.feature" version="1.0.0.qualifier">
+      <category name="Nebula Release Individual Widgets"/>
+   </feature>
+   <feature url="features/org.eclipse.nebula.feature_1.2.0.qualifier.jar" id="org.eclipse.nebula.feature" version="1.2.0.qualifier">
+      <category name="Nebula Release all Widgets and Examples"/>
    </feature>
    <category-def name="Nebula Release all Widgets and Examples" label="Nebula Release all Widgets and Examples">
       <description>

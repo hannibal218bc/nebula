@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010 Oak Ridge National Laboratory.
+ * Copyright (c) 2010, 2017 Oak Ridge National Laboratory and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -16,6 +16,7 @@ import org.eclipse.nebula.visualization.xygraph.figures.XYGraph;
 import org.eclipse.nebula.visualization.xygraph.linearscale.Range;
 import org.eclipse.nebula.visualization.xygraph.util.XYGraphMediaFactory;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.CLabel;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Font;
@@ -55,6 +56,8 @@ public class AxisConfigPage {
 	private Label minLabel;
 	private DoubleInputText minText;
 
+	private Button invertAxisButton;
+
 	private Button dateEnabledButton;
 	private Button autoFormat;
 	private Label formatLabel;
@@ -63,11 +66,27 @@ public class AxisConfigPage {
 	private Button showGridButton;
 	private Button dashGridLineButton;
 	private ColorSelector gridColorSelector;
+	private Button showAxisButton;
 
 	private Composite composite;
+	private boolean enableRanges;
+
+	/**
+	 * Create an Axis Configuration Page for the config dialog.
+	 * 
+	 * @param xyGraph
+	 *            graph to configure
+	 * @param axis
+	 *            axis to configure
+	 * @param enableRanges
+	 *            whether min/max controls are enabled
+	 */
+	public AxisConfigPage(IXYGraph xyGraph, Axis axis, boolean enableRanges) {
+		this((XYGraph) xyGraph, axis, enableRanges);
+	}
 
 	public AxisConfigPage(IXYGraph xyGraph, Axis axis) {
-		this((XYGraph)xyGraph, axis);
+		this((XYGraph) xyGraph, axis);
 	}
 
 	/**
@@ -78,10 +97,22 @@ public class AxisConfigPage {
 	 */
 	@Deprecated
 	public AxisConfigPage(XYGraph xyGraph, Axis axis) {
+		this(xyGraph, axis, true);
+	}
+
+	/**
+	 * Use {@link #AxisConfigPage(IXYGraph, Axis)} instead
+	 * 
+	 * @param xyGraph
+	 * @param axis
+	 */
+	@Deprecated
+	public AxisConfigPage(XYGraph xyGraph, Axis axis, boolean enableRanges) {
 		this.xyGraph = xyGraph;
 		this.axis = axis;
 		scaleFont = axis.getFont();
 		titleFont = axis.getTitleFont();
+		this.enableRanges = enableRanges;
 	}
 
 	public void createPage(final Composite composite) {
@@ -157,10 +188,10 @@ public class AxisConfigPage {
 		axisColorSelector.getButton().setLayoutData(gd);
 		axisColorSelector.addListener(new IPropertyChangeListener() {
 			public void propertyChange(PropertyChangeEvent event) {
-				scaleFontLabel.setForeground(XYGraphMediaFactory.getInstance().getColor(
-						axisColorSelector.getColorValue()));
-				titleFontLabel.setForeground(XYGraphMediaFactory.getInstance().getColor(
-						axisColorSelector.getColorValue()));
+				scaleFontLabel
+						.setForeground(XYGraphMediaFactory.getInstance().getColor(axisColorSelector.getColorValue()));
+				titleFontLabel
+						.setForeground(XYGraphMediaFactory.getInstance().getColor(axisColorSelector.getColorValue()));
 			}
 		});
 
@@ -179,6 +210,7 @@ public class AxisConfigPage {
 		maxOrAutoScaleThrText = new DoubleInputText(composite, SWT.BORDER | SWT.SINGLE);
 		gd = new GridData(SWT.FILL, SWT.BEGINNING, true, false, 2, 1);
 		maxOrAutoScaleThrText.getText().setLayoutData(gd);
+		maxOrAutoScaleThrText.getText().setEnabled(enableRanges);
 
 		minLabel = new Label(composite, 0);
 		minLabel.setText("Minimum: ");
@@ -187,6 +219,18 @@ public class AxisConfigPage {
 		minText = new DoubleInputText(composite, SWT.BORDER | SWT.SINGLE);
 		gd = new GridData(SWT.FILL, SWT.BEGINNING, true, false, 2, 1);
 		minText.getText().setLayoutData(gd);
+		minText.getText().setEnabled(enableRanges);
+
+		if (!enableRanges) {
+			final CLabel info = new CLabel(composite, SWT.WRAP);
+			info.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false, 3, 1));
+			info.setText("Automatic rescale is on, max. and min. therefore cannot be edited.");
+			info.setImage(XYGraphMediaFactory.getInstance().getImage("images/rescale.png"));
+
+			Label sep = new Label(composite, SWT.SEPARATOR | SWT.HORIZONTAL);
+			sep.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false, 3, 1));
+
+		}
 
 		// autoScale button listener
 		autoScaleButton.addSelectionListener(new SelectionAdapter() {
@@ -256,6 +300,9 @@ public class AxisConfigPage {
 			}
 		});
 
+		Label sep = new Label(composite, SWT.SEPARATOR | SWT.HORIZONTAL);
+		sep.setLayoutData(new GridData(SWT.FILL, SWT.NONE, true, false, 3, 1));
+
 		showGridButton = new Button(composite, SWT.CHECK);
 		configCheckButton(showGridButton, "Show Grid Line");
 		dashGridLineButton = new Button(composite, SWT.CHECK);
@@ -269,6 +316,13 @@ public class AxisConfigPage {
 		gridColorSelector = new ColorSelector(composite);
 		gd = new GridData(SWT.BEGINNING, SWT.CENTER, false, false, 1, 1);
 		gridColorSelector.getButton().setLayoutData(gd);
+
+		showAxisButton = new Button(composite, SWT.CHECK);
+		configCheckButton(showAxisButton, "Show Axis");
+
+		invertAxisButton = new Button(composite, SWT.CHECK);
+		configCheckButton(invertAxisButton, "Invert Axis");
+
 		initialize();
 	}
 
@@ -293,6 +347,9 @@ public class AxisConfigPage {
 		axis.setForegroundColor(XYGraphMediaFactory.getInstance().getColor(axisColorSelector.getColorValue()));
 		axis.setPrimarySide(primaryButton.getSelection());
 		axis.setLogScale(logButton.getSelection());
+		// must be set before autoScale as we update the maxOrAutoScaleThrText
+		// button as well
+		setInverted(invertAxisButton.getSelection());
 		axis.setAutoScale(autoScaleButton.getSelection());
 		if (autoScaleButton.getSelection())
 			axis.setAutoScaleThreshold(maxOrAutoScaleThrText.getDoubleValue());
@@ -302,8 +359,8 @@ public class AxisConfigPage {
 		axis.setAutoFormat(autoFormat.getSelection());
 		if (!autoFormat.getSelection()) {
 			String saveFormat = axis.getFormatPattern();
-			axis.setFormatPattern(formatText.getText());
 			try {
+				axis.setFormatPattern(formatText.getText());
 				axis.format(0);
 			} catch (Exception e) {
 				axis.setFormatPattern(saveFormat);
@@ -316,6 +373,20 @@ public class AxisConfigPage {
 		axis.setShowMajorGrid(showGridButton.getSelection());
 		axis.setDashGridLine(dashGridLineButton.getSelection());
 		axis.setMajorGridColor(XYGraphMediaFactory.getInstance().getColor(gridColorSelector.getColorValue()));
+		axis.setVisible(showAxisButton.getSelection());
+	}
+
+	private void setInverted(boolean isInverted) {
+		axis.setInverted(isInverted);
+		double min = minText.getDoubleValue();
+		double max = maxOrAutoScaleThrText.getDoubleValue();
+		if ((isInverted && (min < max)) || (!isInverted && (min > max))) {
+			minText.getText().setText(String.valueOf(max));
+			if (autoScaleButton.getSelection())
+				maxOrAutoScaleThrText.getText().setText(String.valueOf(axis.getAutoScaleThreshold()));
+			else
+				maxOrAutoScaleThrText.getText().setText(String.valueOf(min));
+		}
 	}
 
 	private void initialize() {
@@ -357,6 +428,8 @@ public class AxisConfigPage {
 		showGridButton.setSelection(axis.isShowMajorGrid());
 		dashGridLineButton.setSelection(axis.isDashGridLine());
 		gridColorSelector.setColorValue(axis.getMajorGridColor().getRGB());
+		showAxisButton.setSelection(axis.isVisible());
+		invertAxisButton.setSelection(axis.isInverted());
 	}
 
 }

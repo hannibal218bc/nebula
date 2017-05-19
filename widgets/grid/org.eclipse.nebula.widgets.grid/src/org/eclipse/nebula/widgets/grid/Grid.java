@@ -4327,7 +4327,14 @@ public class Grid extends Canvas {
 		if (columnScrolling) {
 			int pixels = 0;
 			for (int i = 0; i < selection; i++) {
-				pixels += ((GridColumn) displayOrderedColumns.get(i)).getWidth();
+				GridColumn gridColumn = (GridColumn) displayOrderedColumns.get(i);
+				if(gridColumn.isVisible()) {
+					pixels += gridColumn.getWidth();
+				} else {
+					if(selection < displayOrderedColumns.size() - 1) {
+						selection += 1;
+					}
+				}
 			}
 			selection = pixels;
 		}
@@ -7012,8 +7019,12 @@ public class Grid extends Canvas {
 				}
 			}
 			else {
+				if (e.stateMask == SWT.MOD1 && items.size() > 0) {
+					impliedFocusItem = items.get(0);
+				}
 				newSelection = impliedFocusItem;
 				newColumnFocus = getVisibleColumn_DegradeRight(newSelection, (GridColumn) displayOrderedColumns.get(0));
+				intendedFocusColumn = newColumnFocus;
 			}
 
 			break;
@@ -7078,11 +7089,12 @@ public class Grid extends Canvas {
 				focusItem = newSelection;
 			showItem(newSelection);
 
-			if (e.stateMask != SWT.MOD1) {
+			if (e.stateMask != SWT.MOD1 || isMod1Home(e)) {
+				int stateMask = e.stateMask == SWT.MOD1 ? SWT.NONE : e.stateMask;
 				Event selEvent = updateCellSelection(new Point(indexOf(newColumnFocus), newSelection.getRowIndex()),
-						e.stateMask, false, false);
+						stateMask, false, false);
 				if (selEvent != null) {
-					selEvent.stateMask = e.stateMask;
+					selEvent.stateMask = stateMask;
 					selEvent.character = e.character;
 					selEvent.keyCode = e.keyCode;
 					notifyListeners(SWT.Selection, selEvent);
@@ -7109,6 +7121,10 @@ public class Grid extends Canvas {
 			if (selectionEvent != null)
 				notifyListeners(SWT.Selection, selectionEvent);
 		}
+	}
+
+	private boolean isMod1Home(Event e) {
+		return e.stateMask == SWT.MOD1 && e.keyCode == SWT.HOME;
 	}
 
 	private void handleSpaceBarDown(Event event) {

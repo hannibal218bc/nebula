@@ -214,14 +214,15 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 			break;
 		case FOUR_DIRECTIONS:
 		case LEFT_RIGHT:
-			hLine.setPoints(new PointList(new int[] { xAxis.getValuePosition(xAxis.getRange().getLower(), false),
-					currentPosition.y, xAxis.getValuePosition(xAxis.getRange().getUpper(), false), currentPosition.y }));
+			hLine.setPoints(new PointList(
+					new int[] { xAxis.getValuePosition(xAxis.getRange().getLower(), false), currentPosition.y,
+							xAxis.getValuePosition(xAxis.getRange().getUpper(), false), currentPosition.y }));
 			if (cursorLineStyle != CursorLineStyle.FOUR_DIRECTIONS)
 				break;
 		case UP_DOWN:
-			vLine.setPoints(new PointList(new int[] { currentPosition.x,
-					yAxis.getValuePosition(yAxis.getRange().getUpper(), false), currentPosition.x,
-					yAxis.getValuePosition(yAxis.getRange().getLower(), false) }));
+			vLine.setPoints(new PointList(
+					new int[] { currentPosition.x, yAxis.getValuePosition(yAxis.getRange().getUpper(), false),
+							currentPosition.x, yAxis.getValuePosition(yAxis.getRange().getLower(), false) }));
 			break;
 		default:
 			break;
@@ -275,11 +276,11 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 		switch (cursorLineStyle) {
 		case NONE:
 			// left
-			graphics.drawLine(currentPosition.x - POINT_SIZE / 2, currentPosition.y, currentPosition.x - POINT_SIZE / 2
-					- CURSOR_LINE_LENGTH, currentPosition.y);
+			graphics.drawLine(currentPosition.x - POINT_SIZE / 2, currentPosition.y,
+					currentPosition.x - POINT_SIZE / 2 - CURSOR_LINE_LENGTH, currentPosition.y);
 			// right
-			graphics.drawLine(currentPosition.x + POINT_SIZE / 2, currentPosition.y, currentPosition.x + POINT_SIZE / 2
-					+ CURSOR_LINE_LENGTH, currentPosition.y);
+			graphics.drawLine(currentPosition.x + POINT_SIZE / 2, currentPosition.y,
+					currentPosition.x + POINT_SIZE / 2 + CURSOR_LINE_LENGTH, currentPosition.y);
 			// up
 			graphics.drawLine(currentPosition.x, currentPosition.y - POINT_SIZE / 2, currentPosition.x,
 					currentPosition.y - POINT_SIZE / 2 - CURSOR_LINE_LENGTH);
@@ -406,7 +407,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 
 			currentPosition = new Point(xAxis.getValuePosition(xValue, false), yAxis.getValuePosition(yValue, false));
 		}
-		updateInfoLableText(true);
+		updateInfoLabelText(true);
 		if (xValue != oldX || yValue != oldY)
 			revalidate();
 		fireAnnotationMoved(oldX, oldY, xValue, yValue);
@@ -429,7 +430,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 		yValue = y;
 
 		currentPosition = new Point(xAxis.getValuePosition(xValue, false), yAxis.getValuePosition(yValue, false));
-		updateInfoLableText(true);
+		updateInfoLabelText(true);
 		revalidate();
 		if (oldX != xValue || oldY != yValue)
 			fireAnnotationMoved(oldX, oldY, xValue, yValue);
@@ -438,7 +439,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	/**
 	 *
 	 */
-	private void updateInfoLableText(boolean updateX0Y0) {
+	private void updateInfoLabelText(boolean updateX0Y0) {
 		String info = "";
 		if (showName)
 			info = name;
@@ -451,8 +452,8 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 		knowX0Y0 = !updateX0Y0;
 	}
 
-	private void updateInfoLableText() {
-		updateInfoLableText(true);
+	private void updateInfoLabelText() {
+		updateInfoLabelText(true);
 	}
 
 	/**
@@ -487,7 +488,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	 */
 	public void setName(String name) {
 		this.name = name;
-		updateInfoLableText();
+		updateInfoLabelText();
 	}
 
 	@Override
@@ -553,7 +554,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	 */
 	public void setShowName(boolean showName) {
 		this.showName = showName;
-		updateInfoLableText();
+		updateInfoLabelText();
 	}
 
 	/**
@@ -562,7 +563,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	 */
 	public void setShowSampleInfo(boolean showSampleInfo) {
 		this.showSampleInfo = showSampleInfo;
-		updateInfoLableText();
+		updateInfoLabelText();
 	}
 
 	/**
@@ -571,7 +572,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	 */
 	public void setShowPosition(boolean showPosition) {
 		this.showPosition = showPosition;
-		updateInfoLableText();
+		updateInfoLabelText();
 	}
 
 	/**
@@ -642,8 +643,8 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 	 * @param currentPosition
 	 *            the currentPosition to set
 	 */
-	public void setCurrentPosition(Point currentPosition, boolean keepLablePosition, boolean calcValueFromPosition) {
-		if (keepLablePosition) {
+	public void setCurrentPosition(Point currentPosition, boolean keepLabelPosition, boolean calcValueFromPosition) {
+		if (keepLabelPosition) {
 			int deltaX = this.currentPosition.x - currentPosition.x;
 			int deltaY = this.currentPosition.y - currentPosition.y;
 			x0 += deltaX;
@@ -659,13 +660,13 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 			yValue = yAxis.getPositionValue(currentPosition.y, false);
 			fireAnnotationMoved(oldX, oldY, xValue, yValue);
 		}
-		updateInfoLableText(keepLablePosition);
+		updateInfoLabelText(keepLabelPosition);
 		revalidate();
 		repaint();
 	}
 
-	public void setCurrentPosition(Point currentPosition, boolean keepLablePosition) {
-		setCurrentPosition(currentPosition, keepLablePosition, true);
+	public void setCurrentPosition(Point currentPosition, boolean keepLabelPosition) {
+		setCurrentPosition(currentPosition, keepLabelPosition, true);
 	}
 
 	/**
@@ -694,7 +695,7 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 
 	public void axisRevalidated(Axis axis) {
 		currentPosition = new Point(xAxis.getValuePosition(xValue, false), yAxis.getValuePosition(yValue, false));
-		updateInfoLableText();
+		updateInfoLabelText();
 		if (getParent() != null)
 			layout();
 	}
@@ -744,8 +745,8 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 					if (xValue != currentSnappedSample.getXValue()) {
 						xValue = currentSnappedSample.getXValue();
 					}
-					currentPosition = new Point(xAxis.getValuePosition(xValue, false), yAxis.getValuePosition(yValue,
-							false));
+					currentPosition = new Point(xAxis.getValuePosition(xValue, false),
+							yAxis.getValuePosition(yValue, false));
 					fireAnnotationMoved(oldX, oldY, xValue, yValue);
 				} else if (trace.getHotSampleList().size() > 0) {
 					updateToDefaultPosition();
@@ -980,10 +981,10 @@ public class Annotation extends Figure implements IAxisListener, IDataProviderLi
 				graphics.setAntialias(SWT.ON);
 			// draw X-cross point
 			Rectangle clientArea = getClientArea().getCopy().shrink(POINT_SIZE / 2, POINT_SIZE / 2);
-			graphics.drawLine(clientArea.x, clientArea.y, clientArea.x + clientArea.width, clientArea.y
-					+ clientArea.height);
-			graphics.drawLine(clientArea.x + clientArea.width, clientArea.y, clientArea.x, clientArea.y
-					+ clientArea.height);
+			graphics.drawLine(clientArea.x, clientArea.y, clientArea.x + clientArea.width,
+					clientArea.y + clientArea.height);
+			graphics.drawLine(clientArea.x + clientArea.width, clientArea.y, clientArea.x,
+					clientArea.y + clientArea.height);
 
 		}
 	}

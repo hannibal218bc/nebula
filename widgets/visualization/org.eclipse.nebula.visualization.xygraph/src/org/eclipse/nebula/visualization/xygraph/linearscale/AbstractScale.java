@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2010 Oak Ridge National Laboratory.
+ * Copyright (c) 2010, 2017 Oak Ridge National Laboratory and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -53,9 +53,9 @@ public abstract class AbstractScale extends Figure {
 	/**
 	 * the digits limit to be displayed in engineering format
 	 */
-	private static final int ENGINEERING_LIMIT = 4;
+	protected static final int ENGINEERING_LIMIT = 4;
 
-	private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd\nHH:mm:ss"; //$NON-NLS-1$
+	protected static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd\nHH:mm:ss"; //$NON-NLS-1$
 
 	private static final Map<String, Format> formatCache = new HashMap<String, Format>();
 
@@ -69,7 +69,7 @@ public abstract class AbstractScale extends Figure {
 	public final static double DEFAULT_LOG_SCALE_MAX = 100d;
 
 	/** the default label format */
-	private String default_decimal_format = "############.##"; //$NON-NLS-1$
+	protected String default_decimal_format = "############.##"; //$NON-NLS-1$
 
 	/** the state if the axis scale is log scale */
 	protected boolean logScaleEnabled = false;
@@ -114,8 +114,10 @@ public abstract class AbstractScale extends Figure {
 	private int formatPatternSize = 0;
 
 	/**
-	 * Formats the given object.
-	 * 
+	 * Formats the given object as a DateFormat if Date is enabled or as a
+	 * DecimalFormat. This is based on an internal format pattern given the
+	 * object in parameter.
+	 *
 	 * @param obj
 	 *            the object
 	 * @return the formatted string
@@ -125,8 +127,12 @@ public abstract class AbstractScale extends Figure {
 	}
 
 	/**
-	 * Formats the given object.
-	 * 
+	 * Formats the given object as a DateFormat if Date is enabled or as a
+	 * DecimalFormat. This is based on an internal format pattern given the
+	 * object in parameter. When formatting a date, if minOrMaxDate is true as
+	 * well as autoFormat, then the SimpleDateFormat us used to format the
+	 * object.
+	 *
 	 * @param obj
 	 *            the object
 	 * @param minOrMaxDate
@@ -137,7 +143,8 @@ public abstract class AbstractScale extends Figure {
 
 		if (isDateEnabled()) {
 			if (autoFormat || formatPattern == null || formatPattern.equals("")
-					|| formatPattern.equals(default_decimal_format) || formatPattern.equals(DEFAULT_ENGINEERING_FORMAT)) {
+					|| formatPattern.equals(default_decimal_format)
+					|| formatPattern.equals(DEFAULT_ENGINEERING_FORMAT)) {
 				double length = Math.abs(max - min);
 				if (length <= 5000 || timeUnit == Calendar.MILLISECOND) { // less
 																			// than
@@ -166,7 +173,7 @@ public abstract class AbstractScale extends Figure {
 					internalSetFormatPattern("MM-dd");//$NON-NLS-1$
 					// } else if (length <= 31536000000d ||timeUnit ==
 					// Calendar.MONTH) { //less than a year
-					//	                	formatPattern = "yyyy-MM-dd";//$NON-NLS-1$
+					// formatPattern = "yyyy-MM-dd";//$NON-NLS-1$
 				} else { // more than a month
 					internalSetFormatPattern("yyyy-MM-dd"); //$NON-NLS-1$
 				}
@@ -216,13 +223,11 @@ public abstract class AbstractScale extends Figure {
 	}
 
 	/**
-	 * Use the correctly spelled method instead
-	 * 
-	 * @return the side of the tick label relative to the tick marks
+	 * @deprecated use correctly spelled {@link #getTickLabelSide(LabelSide)}
 	 */
 	@Deprecated
 	public LabelSide getTickLablesSide() {
-		return tickLabelSide;
+		return getTickLabelSide();
 	}
 
 	/**
@@ -515,9 +520,17 @@ public abstract class AbstractScale extends Figure {
 	 * @param tickLabelSide
 	 *            the side of the tick label relative to tick mark
 	 */
-	public void setTickLableSide(LabelSide tickLabelSide) {
+	public void setTickLabelSide(LabelSide tickLabelSide) {
 		this.tickLabelSide = tickLabelSide;
 		revalidate();
+	}
+
+	/**
+	 * @deprecated use correctly spelled {@link #setTickLabelSide(LabelSide)}
+	 */
+	@Deprecated
+	public void setTickLableSide(LabelSide tickLabelSide) {
+		setTickLabelSide(tickLabelSide);
 	}
 
 	/**
@@ -578,13 +591,21 @@ public abstract class AbstractScale extends Figure {
 	 *            the autoFormat to set
 	 */
 	public void setAutoFormat(boolean autoFormat) {
-		this.autoFormat = autoFormat;
+		internalSetAutoFormat(autoFormat);
 		if (autoFormat) {
 			formatPattern = null;
 			setRange(getRange());
 			format(0);
 		}
+	}
 
+	/**
+	 * Sets ONLY the autoFormat value
+	 *
+	 * @param autoFormat
+	 */
+	protected void internalSetAutoFormat(boolean autoFormat) {
+		this.autoFormat = autoFormat;
 	}
 
 	/**
